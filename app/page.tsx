@@ -1,103 +1,659 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+// app/monitoring/page.tsx
+import React, { useState, useEffect } from 'react';
+import { HiServer, HiExclamationCircle, HiCheckCircle, HiXCircle } from "react-icons/hi";
+import ReactFlow, {
+  Edge,
+  Handle,
+  MiniMap,
+  Controls,
+  Background,
+  NodeProps,
+  Position,
+  Node,
+} from 'reactflow';
+import 'reactflow/dist/style.css';
+
+interface StatusNodeData {
+  id: string;
+  type: string;
+  label: string;
+  status: boolean;
+  state?: string;
+  instanceId?: string;
+  publicIp?: string;
+  dnsName?: string;
+  availabilityZone?: string;
+  nodes?: Node<StatusNodeData>[];
+  groupHeight?: number;
+}
+
+interface Instance {
+  id: string;
+  instanceId: string;
+  name: string;
+  status: string;
+  publicIp?: string;
+  availabilityZone: string;
+}
+
+// 커스텀 노드 컴포넌트: 상태에 따라 테두리 색상을 변경 (녹색: Online, 빨간색: Offline)
+const StatusNode: React.FC<NodeProps<StatusNodeData>> = ({ data }) => {
+  const getStatusColor = () => {
+    if (data.state === 'group') {
+      return '#4a90e2'; // 그룹 노드는 파란색 테두리
+    }
+    if (data.state) {
+      switch (data.state.toLowerCase()) {
+        case "running":
+          return "#22c55e"; // 초록 (정상)
+        case "stopped":
+          return "#f97316"; // 주황 (주의)
+        case "terminated":
+          return "#ef4444"; // 빨강 (심각)
+        default:
+          return "#94a3b8"; // 회색 (알 수 없음)
+      }
+    }
+    return data.status ? '#22c55e' : '#ef4444';
+  };
+
+  const getStatusText = () => {
+    if (data.state === 'group') {
+      return ''; // 그룹 노드는 상태 텍스트 표시하지 않음
+    }
+    if (data.state) {
+      return `Status: ${data.state}`;
+    }
+    return `Status: ${data.status ? 'Online' : 'Offline'}`;
+  };
+
+  const isALB = data.label?.includes('ALB');
+  const isGroup = data.state === 'group';
+  const borderColor = getStatusColor();
+  
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    <div
+      style={{
+        padding: 0,
+        border: 'none',
+        background: 'transparent',
+        position: 'relative',
+        width: isGroup ? 'none' : 'auto',
+        height: isGroup ? 'none' : 'auto',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        pointerEvents: isGroup ? 'none' : 'auto'
+      }}
+    >
+      {isGroup ? (
+        <div style={{
+          background: '#1e40af',
+          color: 'white',
+          padding: '4px 16px',
+          borderRadius: '16px',
+          fontSize: '0.9rem',
+          whiteSpace: 'nowrap',
+          boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+          fontWeight: 500,
+          pointerEvents: 'auto'
+        }}>
+          {data.availabilityZone}
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      ) : (
+        <div style={{
+          padding: 10,
+          border: `2px solid ${borderColor}`,
+          borderRadius: isALB ? 15 : 5,
+          background: isALB 
+            ? 'linear-gradient(to bottom, #f8fafc, #f1f5f9)'
+            : '#ffffff',
+          boxShadow: isALB
+            ? '0 4px 8px rgba(0, 0, 0, 0.1)'
+            : '0 2px 4px rgba(0, 0, 0, 0.05)',
+          minWidth: isALB ? 180 : 150,
+          textAlign: 'center'
+        }}>
+          <div style={{ marginBottom: isALB ? 8 : 4 }}>
+            {isALB ? (
+              <>
+                <div style={{ 
+                  fontSize: '0.8rem', 
+                  color: '#64748b',
+                  marginBottom: 2 
+                }}>
+                  Load Balancer
+                </div>
+                <strong style={{ 
+                  fontSize: '1.1rem',
+                  color: '#0f172a'
+                }}>
+                  {data.label}
+                </strong>
+              </>
+            ) : (
+              <strong style={{ 
+                fontSize: '1rem',
+                color: '#0f172a'
+              }}>
+                {data.label}
+              </strong>
+            )}
+          </div>
+          <div style={{ 
+            fontSize: '0.8rem',
+            color: '#64748b',
+            marginBottom: isALB ? 8 : 4
+          }}>
+            {getStatusText()}
+          </div>
+          {!isALB && (
+            <>
+              {data.instanceId && (
+                <div style={{ 
+                  fontSize: '0.75rem', 
+                  color: '#64748b',
+                  marginBottom: 2
+                }}>
+                  ID: {data.instanceId}
+                </div>
+              )}
+              {data.publicIp && (
+                <div style={{ 
+                  fontSize: '0.75rem', 
+                  color: '#64748b',
+                  marginBottom: 2
+                }}>
+                  IP: {data.publicIp}
+                </div>
+              )}
+            </>
+          )}
+          {isALB && data.dnsName && (
+            <div style={{ 
+              fontSize: '0.75rem', 
+              color: '#64748b',
+              padding: '4px 8px',
+              background: '#f8fafc',
+              borderRadius: 4,
+              margin: '4px 0'
+            }}>
+              {data.dnsName}
+            </div>
+          )}
+        </div>
+      )}
+      <Handle 
+        type="target" 
+        position={Position.Top} 
+        style={{ 
+          visibility: isGroup ? 'hidden' : 'visible',
+          opacity: isGroup ? 0 : 1,
+          background: '#555'
+        }} 
+      />
+      <Handle 
+        type="source" 
+        position={Position.Bottom} 
+        style={{ 
+          visibility: isGroup ? 'hidden' : 'visible',
+          opacity: isGroup ? 0 : 1,
+          background: '#555'
+        }} 
+      />
+    </div>
+  );
+};
+
+// React Flow에 등록할 커스텀 노드 타입
+const nodeTypes = {
+  status: StatusNode,
+  group: StatusNode,
+};
+
+export default function MonitoringPage() {
+  const [nodes, setNodes] = useState<Node<StatusNodeData>[]>([]);
+  const [edges, setEdges] = useState<Edge[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [vpcId, setVpcId] = useState<string>('');
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  const fetchResources = async () => {
+    if (!vpcId) return;
+    
+    try {
+      setLoading(true);
+      
+      // EC2 인스턴스 정보 가져오기
+      const instancesResponse = await fetch(`/api/instances?vpcId=${vpcId}`);
+      const instancesData = await instancesResponse.json();
+
+      // ALB 정보 가져오기
+      const albResponse = await fetch(`/api/loadbalancers?vpcId=${vpcId}`);
+      const albData = await albResponse.json();
+
+      if (instancesData.instances && albData.loadBalancers) {
+        // WEB과 WAS 인스턴스만 필터링
+        const filteredInstances = instancesData.instances.filter((instance: any) => {
+          const nameTag = instance.tags?.find((tag: any) => tag.Key === 'Name')?.Value || '';
+          return nameTag.includes('WEB-Instance') || nameTag.includes('WAS-Instance');
+        });
+
+        // WEB과 WAS ALB 필터링
+        const webAlb = albData.loadBalancers.find((alb: any) => alb.name === 'DRS-WEB-ALB');
+        const wasAlb = albData.loadBalancers.find((alb: any) => alb.name === 'DRS-WAS-ALB');
+
+        // WEB 인스턴스 노드 생성 (가용영역별로 그룹화)
+        const webInstances = filteredInstances.filter((instance: any) => 
+          instance.tags?.find((tag: any) => tag.Key === 'Name')?.Value?.includes('WEB-Instance')
+        );
+
+        // 가용영역별로 WEB 인스턴스 그룹화
+        const webInstancesByAZ = webInstances.reduce((acc: Record<string, any[]>, instance: any) => {
+          const az = instance.availabilityZone;
+          if (!acc[az]) {
+            acc[az] = [];
+          }
+          acc[az].push(instance);
+          return acc;
+        }, {});
+
+        // WAS 인스턴스 노드 생성 (가용영역별로 그룹화)
+        const wasInstances = filteredInstances.filter((instance: any) => 
+          instance.tags?.find((tag: any) => tag.Key === 'Name')?.Value?.includes('WAS-Instance')
+        );
+
+        // 가용영역별로 WAS 인스턴스 그룹화
+        const wasInstancesByAZ = wasInstances.reduce((acc: Record<string, any[]>, instance: any) => {
+          const az = instance.availabilityZone;
+          if (!acc[az]) {
+            acc[az] = [];
+          }
+          acc[az].push(instance);
+          return acc;
+        }, {});
+
+        // 가용영역 정렬을 위한 전체 가용영역 목록 생성
+        const allAZs = [...new Set([
+          ...Object.keys(webInstancesByAZ),
+          ...Object.keys(wasInstancesByAZ)
+        ])].sort();
+
+        // 레이아웃 설정
+        const columnWidth = 180; // 인스턴스 열 너비 조정
+        const instanceSpacing = 100; // 인스턴스 간 세로 간격
+        const groupSpacing = 800; // WEB과 WAS 그룹 사이 간격
+        const instancesPerRow = 3; // 한 행당 인스턴스 수
+
+        // 각 가용영역별 최대 인스턴스 수 계산
+        const maxWebInstancesPerAZ = Math.max(...Object.values(webInstancesByAZ).map(instances => (instances as any[]).length), 0);
+        const maxWasInstancesPerAZ = Math.max(...Object.values(wasInstancesByAZ).map(instances => (instances as any[]).length), 0);
+
+        // 그룹 높이 계산 (행 수 * 간격)
+        const webGroupHeight = Math.ceil(maxWebInstancesPerAZ / instancesPerRow) * instanceSpacing + 100;
+        const wasGroupHeight = Math.ceil(maxWasInstancesPerAZ / instancesPerRow) * instanceSpacing + 100;
+
+        // Y 좌표 계산
+        const webAlbY = 0;
+        const webGroupY = webAlbY + 200;
+        const webInstanceStartY = webGroupY + 100;
+
+        const wasAlbY = webInstanceStartY + webGroupHeight + 300;
+        const wasGroupY = wasAlbY + 200;
+        const wasInstanceStartY = wasGroupY + 100;
+
+        // ALB 노드 생성
+        const albNodes: Node<StatusNodeData>[] = [];
+        const webNodes: Node<StatusNodeData>[] = [];
+        const wasNodes: Node<StatusNodeData>[] = [];
+        const centerX = 250 + ((allAZs.length - 1) * columnWidth / 2);
+        
+        if (webAlb) {
+          albNodes.push({
+            id: 'web-alb',
+            type: 'status',
+            position: { x: centerX, y: webAlbY },
+            data: {
+              id: 'web-alb',
+              type: 'status',
+              label: 'WEB ALB',
+              status: true,
+              state: 'active',
+              dnsName: webAlb.dnsName
+            }
+          });
+        }
+
+        // WEB 인스턴스 노드 생성
+        allAZs.forEach((az, azIndex) => {
+          const instances = webInstancesByAZ[az] || [];
+          const typedInstances = instances as any[];
+          const columnX = 250 + (azIndex * columnWidth);
+
+          // 가용영역 그룹 노드 추가
+          const webNode: Node<StatusNodeData> = {
+            id: `web-group-${az}`,
+            type: 'group',
+            position: { 
+              x: columnX, 
+              y: webGroupY
+            },
+            data: { 
+              id: `web-group-${az}`,
+              type: 'group',
+              label: `WEB ${az}`,
+              status: true,
+              state: 'group',
+              availabilityZone: az,
+              groupHeight: webGroupHeight
+            },
+          };
+          webNodes.push(webNode);
+
+          // 각 인스턴스 노드 생성
+          const nodesInAZ = typedInstances.map((instance: any, index: number) => {
+            const row = Math.floor(index / instancesPerRow);
+            const col = index % instancesPerRow;
+            return {
+              id: instance.instanceId,
+              type: 'status',
+              position: { 
+                x: columnX + (col * columnWidth) - columnWidth, // 중앙 정렬을 위해 columnWidth 뺌
+                y: webInstanceStartY + (row * instanceSpacing)
+              },
+              data: { 
+                id: instance.instanceId,
+                type: 'status',
+                label: instance.name || `WEB-Instance-${index + 1}`,
+                status: instance.state === 'running',
+                instanceId: instance.instanceId,
+                state: instance.state,
+                availabilityZone: az,
+                publicIp: instance.publicIp
+              },
+            };
+          });
+          webNodes.push(...nodesInAZ);
+          webNode.data.nodes = nodesInAZ;
+        });
+
+        if (wasAlb) {
+          albNodes.push({
+            id: 'was-alb',
+            type: 'status',
+            position: { x: centerX, y: wasAlbY },
+            data: {
+              id: 'was-alb',
+              type: 'status',
+              label: 'WAS ALB',
+              status: true,
+              state: 'active',
+              dnsName: wasAlb.dnsName
+            }
+          });
+        }
+
+        // WAS 인스턴스 노드 생성
+        allAZs.forEach((az, azIndex) => {
+          const instances = wasInstancesByAZ[az] || [];
+          const typedInstances = instances as any[];
+          const columnX = 250 + (azIndex * columnWidth);
+
+          // 가용영역 그룹 노드 추가
+          const wasNode: Node<StatusNodeData> = {
+            id: `was-group-${az}`,
+            type: 'group',
+            position: { 
+              x: columnX, 
+              y: wasGroupY
+            },
+            data: { 
+              id: `was-group-${az}`,
+              type: 'group',
+              label: `WAS ${az}`,
+              status: true,
+              state: 'group',
+              availabilityZone: az,
+              groupHeight: wasGroupHeight
+            },
+          };
+          wasNodes.push(wasNode);
+
+          // 각 인스턴스 노드 생성
+          const nodesInAZ = typedInstances.map((instance: any, index: number) => {
+            const row = Math.floor(index / instancesPerRow);
+            const col = index % instancesPerRow;
+            return {
+              id: instance.instanceId,
+              type: 'status',
+              position: { 
+                x: columnX + (col * columnWidth) - columnWidth, // 중앙 정렬을 위해 columnWidth 뺌
+                y: wasInstanceStartY + (row * instanceSpacing)
+              },
+              data: { 
+                id: instance.instanceId,
+                type: 'status',
+                label: instance.name || `WAS-Instance-${index + 1}`,
+                status: instance.state === 'running',
+                instanceId: instance.instanceId,
+                state: instance.state,
+                availabilityZone: az,
+                publicIp: instance.publicIp
+              },
+            };
+          });
+          wasNodes.push(...nodesInAZ);
+          wasNode.data.nodes = nodesInAZ;
+        });
+
+        // 모든 노드 합치기
+        const newNodes: Node<StatusNodeData>[] = [
+          ...albNodes,
+          ...webNodes,
+          ...wasNodes
+        ];
+
+        // 엣지 생성
+        const newEdges: Edge[] = [];
+
+        // WEB ALB -> 가용영역 그룹 연결
+        if (webAlb) {
+          allAZs.forEach((az) => {
+            newEdges.push({
+              id: `e-web-alb-to-group-${az}`,
+              source: 'web-alb',
+              target: `web-group-${az}`,
+              animated: true,
+              style: { stroke: '#94a3b8' }
+            });
+          });
+        }
+
+        // 가용영역 그룹 -> WEB 인스턴스 연결
+        allAZs.forEach(az => {
+          const instances = webInstancesByAZ[az] || [];
+          const typedInstances = instances as any[];
+          typedInstances.forEach((instance: any) => {
+            newEdges.push({
+              id: `e-web-group-to-instance-${az}-${instance.instanceId}`,
+              source: `web-group-${az}`,
+              target: instance.instanceId,
+              animated: true,
+              style: { stroke: '#94a3b8' }
+            });
+          });
+        });
+
+        // WEB 인스턴스 -> WAS ALB 연결
+        if (wasAlb) {
+          webInstances.forEach((instance: any) => {
+            newEdges.push({
+              id: `e-web-instance-to-was-alb-${instance.instanceId}`,
+              source: instance.instanceId,
+              target: 'was-alb',
+              animated: true,
+              style: { stroke: '#94a3b8' }
+            });
+          });
+        }
+
+        // WAS ALB -> 가용영역 그룹 연결
+        if (wasAlb) {
+          allAZs.forEach((az) => {
+            newEdges.push({
+              id: `e-was-alb-to-group-${az}`,
+              source: 'was-alb',
+              target: `was-group-${az}`,
+              animated: true,
+              style: { stroke: '#94a3b8' }
+            });
+          });
+        }
+
+        // 가용영역 그룹 -> WAS 인스턴스 연결
+        allAZs.forEach(az => {
+          const instances = wasInstancesByAZ[az] || [];
+          const typedInstances = instances as any[];
+          typedInstances.forEach((instance: any) => {
+            newEdges.push({
+              id: `e-was-group-to-instance-${az}-${instance.instanceId}`,
+              source: `was-group-${az}`,
+              target: instance.instanceId,
+              animated: true,
+              style: { stroke: '#94a3b8' }
+            });
+          });
+        });
+
+        setNodes(newNodes);
+        setEdges(newEdges);
+      }
+    } catch (error) {
+      console.error('Error fetching resources:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isInitialized && vpcId) {
+      // 초기 데이터 로드
+      fetchResources();
+
+      // 10초마다 데이터 갱신
+      const interval = setInterval(fetchResources, 10000);
+
+      // 컴포넌트 언마운트 시 인터벌 정리
+      return () => clearInterval(interval);
+    }
+  }, [vpcId, isInitialized]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsInitialized(true);
+  };
+
+  if (!isInitialized) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh',
+        backgroundColor: '#f5f5f5'
+      }}>
+        <form onSubmit={handleSubmit} style={{
+          background: 'white',
+          padding: '2rem',
+          borderRadius: '8px',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+          width: '100%',
+          maxWidth: '400px'
+        }}>
+          <h2 style={{ marginBottom: '1rem', textAlign: 'center' }}>VPC ID 입력</h2>
+          <div style={{ marginBottom: '1rem' }}>
+            <label htmlFor="vpcId" style={{ display: 'block', marginBottom: '0.5rem' }}>
+              VPC ID
+            </label>
+            <input
+              type="text"
+              id="vpcId"
+              value={vpcId}
+              onChange={(e) => setVpcId(e.target.value)}
+              placeholder="vpc-xxxxxxxx"
+              style={{
+                width: '100%',
+                padding: '0.5rem',
+                borderRadius: '4px',
+                border: '1px solid #ddd',
+                fontSize: '1rem'
+              }}
+              required
+            />
+          </div>
+          <button
+            type="submit"
+            style={{
+              width: '100%',
+              padding: '0.75rem',
+              backgroundColor: '#0070f3',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              fontSize: '1rem',
+              cursor: 'pointer',
+              transition: 'background-color 0.2s'
+            }}
+            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#0051b3'}
+            onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#0070f3'}
+          >
+            모니터링 시작
+          </button>
+        </form>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh',
+        fontSize: '1.2rem',
+        color: '#666'
+      }}>
+        로딩 중...
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ width: '100vw', height: '100vh' }}>
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        nodeTypes={nodeTypes}
+        fitView
+        fitViewOptions={{
+          padding: 0.3,
+          minZoom: 0.5,
+          maxZoom: 1.5,
+        }}
+        minZoom={0.5}
+        maxZoom={1.5}
+        defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
+        attributionPosition="bottom-left"
+        style={{ background: '#f8fafc' }}
+      >
+        <Background />
+        <Controls />
+        <MiniMap />
+      </ReactFlow>
     </div>
   );
 }
+
