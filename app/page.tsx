@@ -282,19 +282,20 @@ export default function MonitoringPage() {
         ])].sort();
 
         // 레이아웃 설정
-        const columnWidth = 180; // 인스턴스 열 너비 조정
-        const instanceSpacing = 100; // 인스턴스 간 세로 간격
+        const columnWidth = 400; // AZ 열 너비 증가
+        const instanceSpacing = 120; // 인스턴스 간 세로 간격 증가
         const groupSpacing = 800; // WEB과 WAS 그룹 사이 간격
-        const instancesPerRow = 3; // 한 행당 인스턴스 수
-        const horizontalSpacing = 200; // 인스턴스 간 가로 간격
+        const instancesPerRow = 2; // 한 행당 인스턴스 수를 2개로 조정
+        const horizontalSpacing = 350; // 인스턴스 간 가로 간격 증가
+        const azSpacing = 100; // AZ 그룹 간 추가 간격
 
         // 각 가용영역별 최대 인스턴스 수 계산
         const maxWebInstancesPerAZ = Math.max(...Object.values(webInstancesByAZ).map(instances => (instances as any[]).length), 0);
         const maxWasInstancesPerAZ = Math.max(...Object.values(wasInstancesByAZ).map(instances => (instances as any[]).length), 0);
 
         // 그룹 높이 계산 (행 수 * 간격)
-        const webGroupHeight = Math.ceil(maxWebInstancesPerAZ / instancesPerRow) * instanceSpacing + 100;
-        const wasGroupHeight = Math.ceil(maxWasInstancesPerAZ / instancesPerRow) * instanceSpacing + 100;
+        const webGroupHeight = Math.ceil(maxWebInstancesPerAZ / instancesPerRow) * instanceSpacing + 150; // 여유 공간 추가
+        const wasGroupHeight = Math.ceil(maxWasInstancesPerAZ / instancesPerRow) * instanceSpacing + 150; // 여유 공간 추가
 
         // Y 좌표 계산
         const webAlbY = 0;
@@ -309,7 +310,7 @@ export default function MonitoringPage() {
         const albNodes: Node<StatusNodeData>[] = [];
         const webNodes: Node<StatusNodeData>[] = [];
         const wasNodes: Node<StatusNodeData>[] = [];
-        const centerX = 250 + ((allAZs.length - 1) * columnWidth / 2);
+        const centerX = 250 + ((allAZs.length - 1) * (columnWidth + azSpacing) / 2);
         
         if (webAlb) {
           albNodes.push({
@@ -331,14 +332,14 @@ export default function MonitoringPage() {
         allAZs.forEach((az, azIndex) => {
           const instances = webInstancesByAZ[az] || [];
           const typedInstances = instances as any[];
-          const columnX = 250 + (azIndex * columnWidth);
+          const columnX = 250 + (azIndex * (columnWidth + azSpacing));
 
           // 가용영역 그룹 노드 추가
           const webNode: Node<StatusNodeData> = {
             id: `web-group-${az}`,
             type: 'group',
             position: { 
-              x: columnX, 
+              x: 250 + (azIndex * (columnWidth + azSpacing)), 
               y: webGroupY
             },
             data: { 
@@ -357,11 +358,12 @@ export default function MonitoringPage() {
           const nodesInAZ = typedInstances.map((instance: any, index: number) => {
             const row = Math.floor(index / instancesPerRow);
             const col = index % instancesPerRow;
+            const baseX = 250 + (azIndex * (columnWidth + azSpacing));
             return {
               id: instance.instanceId,
               type: 'status',
               position: { 
-                x: columnX + (col * horizontalSpacing) - horizontalSpacing, // 가로 간격 적용
+                x: baseX + (col * horizontalSpacing) - horizontalSpacing/2,
                 y: webInstanceStartY + (row * instanceSpacing)
               },
               data: { 
@@ -400,14 +402,14 @@ export default function MonitoringPage() {
         allAZs.forEach((az, azIndex) => {
           const instances = wasInstancesByAZ[az] || [];
           const typedInstances = instances as any[];
-          const columnX = 250 + (azIndex * columnWidth);
+          const columnX = 250 + (azIndex * (columnWidth + azSpacing));
 
           // 가용영역 그룹 노드 추가
           const wasNode: Node<StatusNodeData> = {
             id: `was-group-${az}`,
             type: 'group',
             position: { 
-              x: columnX, 
+              x: 250 + (azIndex * (columnWidth + azSpacing)), 
               y: wasGroupY
             },
             data: { 
@@ -426,11 +428,12 @@ export default function MonitoringPage() {
           const nodesInAZ = typedInstances.map((instance: any, index: number) => {
             const row = Math.floor(index / instancesPerRow);
             const col = index % instancesPerRow;
+            const baseX = 250 + (azIndex * (columnWidth + azSpacing));
             return {
               id: instance.instanceId,
               type: 'status',
               position: { 
-                x: columnX + (col * horizontalSpacing) - horizontalSpacing, // 가로 간격 적용
+                x: baseX + (col * horizontalSpacing) - horizontalSpacing/2,
                 y: wasInstanceStartY + (row * instanceSpacing)
               },
               data: { 
