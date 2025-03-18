@@ -286,6 +286,7 @@ export default function MonitoringPage() {
         const instanceSpacing = 100; // 인스턴스 간 세로 간격
         const groupSpacing = 800; // WEB과 WAS 그룹 사이 간격
         const instancesPerRow = 3; // 한 행당 인스턴스 수
+        const horizontalSpacing = 200; // 인스턴스 간 가로 간격
 
         // 각 가용영역별 최대 인스턴스 수 계산
         const maxWebInstancesPerAZ = Math.max(...Object.values(webInstancesByAZ).map(instances => (instances as any[]).length), 0);
@@ -360,7 +361,7 @@ export default function MonitoringPage() {
               id: instance.instanceId,
               type: 'status',
               position: { 
-                x: columnX + (col * columnWidth) - columnWidth, // 중앙 정렬을 위해 columnWidth 뺌
+                x: columnX + (col * horizontalSpacing) - horizontalSpacing, // 가로 간격 적용
                 y: webInstanceStartY + (row * instanceSpacing)
               },
               data: { 
@@ -429,7 +430,7 @@ export default function MonitoringPage() {
               id: instance.instanceId,
               type: 'status',
               position: { 
-                x: columnX + (col * columnWidth) - columnWidth, // 중앙 정렬을 위해 columnWidth 뺌
+                x: columnX + (col * horizontalSpacing) - horizontalSpacing, // 가로 간격 적용
                 y: wasInstanceStartY + (row * instanceSpacing)
               },
               data: { 
